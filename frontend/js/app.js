@@ -22,6 +22,7 @@ class App {
         document.getElementById('chartType').addEventListener('change', () => this.updateChart());
         document.getElementById('metric').addEventListener('change', () => this.updateChart());
         document.getElementById('timeRange').addEventListener('change', () => this.updateChart());
+        document.getElementById('chartStatistic').addEventListener('change', () => this.updateChart());
         
         // Filter controls
         document.getElementById('jsonProperty').addEventListener('change', () => this.updatePropertyValues());
@@ -41,13 +42,13 @@ class App {
             
             console.log('Loading entities...');
             // Load entities
-            const response = await apiClient.getEntities('githubPullRequest');
+            const response = await apiClient.getEntities('github_pull_request');
             console.log('Entities loaded:', response.data.length);
             this.rawEntities = response.data;
             
             console.log('Extracting properties...');
             // Extract properties
-            const propertiesResponse = await apiClient.getProperties('githubPullRequest');
+            const propertiesResponse = await apiClient.getProperties('github_pull_request');
             console.log('Properties extracted:', propertiesResponse.data.length);
             this.availableProperties = propertiesResponse.data;
             
@@ -90,7 +91,7 @@ class App {
         }
 
         try {
-            const response = await apiClient.getPropertyValues(jsonProperty, 'githubPullRequest');
+            const response = await apiClient.getPropertyValues(jsonProperty, 'github_pull_request');
             
             dropdown.innerHTML = '<option value="all">All Values</option>';
             response.data.forEach(value => {
@@ -139,6 +140,7 @@ class App {
         const chartType = document.getElementById('chartType').value;
         const metric = document.getElementById('metric').value;
         const timeRange = document.getElementById('timeRange').value;
+        const chartStatistic = document.getElementById('chartStatistic').value;
         const jsonProperty = document.getElementById('jsonProperty').value;
         const propertyValue = document.getElementById('propertyValue').value;
 
@@ -157,13 +159,13 @@ class App {
             }
 
             // Process data for chart
-            const chartData = this.processEntitiesForChart(filteredEntities);
+            const chartData = this.processEntitiesForChart(filteredEntities, chartStatistic);
 
             if (chartData.length === 0) {
                 chartManager.showEmptyChart();
                 this.updateStatus('⚠️ No data matches the current filter');
             } else {
-                chartManager.updateChart(chartData, chartType, metric);
+                chartManager.updateChart(chartData, chartType, metric, chartStatistic);
                 this.updateStatus(`📊 Chart updated with ${chartData.length} data points`);
             }
 
@@ -173,8 +175,9 @@ class App {
         }
     }
 
-    processEntitiesForChart(entities) {
-        const chartData = entities.map(entity => {
+    processEntitiesForChart(entities, statistic = 'median') {
+        // Map entities to chart data with hours calculation
+        const entityData = entities.map(entity => {
             const createdAt = new Date(entity.createdAt);
             const updatedAt = new Date(entity.updatedAt);
             const hours = Math.abs(updatedAt - createdAt) / (1000 * 60 * 60);
@@ -187,46 +190,86 @@ class App {
             };
         });
 
-        // Group by date and aggregate
+        // Group by date and collect all hours values for statistics
         const groupedData = {};
-        chartData.forEach(item => {
+        entityData.forEach(item => {
             if (!groupedData[item.date]) {
                 groupedData[item.date] = {
                     date: item.date,
                     hours: 0,
                     count: 0,
-                    avgHours: 0
+                    avgHours: 0,
+                    hoursArray: [] // Store all hours values for statistics
                 };
             }
             groupedData[item.date].hours += item.hours;
             groupedData[item.date].count += item.count;
+            groupedData[item.date].hoursArray.push(item.hours);
         });
 
-        // Calculate averages
+        // Calculate statistics for each day
         Object.values(groupedData).forEach(item => {
-            item.avgHours = item.hours / item.count;
+            const sortedHours = [...item.hoursArray].sort((a, b) => a - b);
+            const count = sortedHours.length;
+
+            // Average (timer-based)
+            item.average = item.hours / item.count;
+
+            // Median (middle value)
+            if (count === 0) {
+                item.median = 0;
+            } else if (count % 2 === 0) {
+                item.median = (sortedHours[count / 2 - 1] + sortedHours[count / 2]) / 2;
+            } else {
+                item.median = sortedHours[Math.floor(count / 2)];
+            }
+
+            // p50 (50th percentile) - same as median
+            item.p50 = item.median;
+
+            // p95 (95th percentile)
+            if (count === 0) {
+                item.p95 = 0;
+            } else {
+                const index = Math.ceil(count * 0.95) - 1;
+                item.p95 = sortedHours[Math.min(index, count - 1)];
+            }
+
+            // Keep existing fields for backward compatibility
+            item.avgHours = item.average;
         });
 
-        return Object.values(groupedData).sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Select the statistic value based on the parameter
+        const result = Object.values(groupedData).map(item => ({
+            date: item.date,
+            hours: item.hours,
+            count: item.count,
+            avgHours: item.average,
+            median: item.median,
+            average: item.average,
+            p50: item.p50,
+            p95: item.p95,
+            // Use the selected statistic as the primary value
+            value: item[statistic] || item.median
+        }));
+
+        return result.sort((a, b) => new Date(a.date) - new Date(b.date));
     }
 
     filterDataByTimeRange(data, timeRange) {
-        if (isNaN(timeRange)) {
-            // Month-based filtering
-            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const monthIndex = monthNames.indexOf(timeRange);
-            if (monthIndex === -1) return data;
-            
-            const currentYear = new Date().getFullYear();
-            return data.filter(item => {
-                const itemDate = new Date(item.createdAt);
-                return itemDate.getMonth() === monthIndex && itemDate.getFullYear() === currentYear;
-            });
-        } else {
-            // Day-based filtering
-            return data.slice(-parseInt(timeRange));
+        const days = parseInt(timeRange);
+        if (isNaN(days)) {
+            return data;
         }
+        
+        // Filter by actual date range (last N days)
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+        
+        return data.filter(item => {
+            const itemDate = new Date(item.createdAt);
+            return itemDate >= cutoffDate;
+        });
     }
 
     getPropertyValue(entity, propertyPath) {

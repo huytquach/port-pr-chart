@@ -62,7 +62,7 @@ class ApiClient {
     }
 
     // Port API endpoints
-    async getEntities(blueprint = 'githubPullRequest') {
+    async getEntities(blueprint = 'github_pull_request') {
         const params = new URLSearchParams({ blueprint });
         return this.request(`/port/entities?${params}`);
     }
@@ -71,12 +71,12 @@ class ApiClient {
         return this.request('/port/blueprints');
     }
 
-    async getProperties(blueprint = 'githubPullRequest') {
+    async getProperties(blueprint = 'github_pull_request') {
         const params = new URLSearchParams({ blueprint });
         return this.request(`/port/properties?${params}`);
     }
 
-    async getPropertyValues(property, blueprint = 'githubPullRequest') {
+    async getPropertyValues(property, blueprint = 'github_pull_request') {
         const params = new URLSearchParams({ blueprint });
         return this.request(`/port/values/${property}?${params}`);
     }

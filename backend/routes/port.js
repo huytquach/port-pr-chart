@@ -5,7 +5,7 @@ const portService = require('../services/portService');
 // GET /api/port/entities - Fetch entities from Port
 router.get('/entities', async (req, res) => {
     try {
-        const { blueprint = 'githubPullRequest' } = req.query;
+        const { blueprint = 'github_pull_request' } = req.query;
         
         const entities = await portService.getEntities(blueprint);
         
@@ -74,7 +74,7 @@ router.get('/blueprints', async (req, res) => {
 // GET /api/port/properties - Extract properties from entities
 router.get('/properties', async (req, res) => {
     try {
-        const { blueprint = 'githubPullRequest' } = req.query;
+        const { blueprint = 'github_pull_request' } = req.query;
         
         const entities = await portService.getEntities(blueprint);
         const properties = portService.extractProperties(entities);
@@ -112,7 +112,7 @@ router.get('/properties', async (req, res) => {
 router.get('/values/:property', async (req, res) => {
     try {
         const { property } = req.params;
-        const { blueprint = 'githubPullRequest' } = req.query;
+        const { blueprint = 'github_pull_request' } = req.query;
         
         const entities = await portService.getEntities(blueprint);
         const values = portService.getPropertyValues(entities, property);

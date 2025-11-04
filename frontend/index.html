@@ -36,21 +36,19 @@
                 <div class="control-group">
                     <label for="timeRange">Time Range:</label>
                     <select id="timeRange" onchange="updateChart()">
-                        <option value="7">Last 7 days</option>
                         <option value="30">Last 30 days</option>
+                        <option value="60">Last 60 days</option>
                         <option value="90">Last 90 days</option>
-                        <option value="Jan">Jan</option>
-                        <option value="Feb">Feb</option>
-                        <option value="Mar">Mar</option>
-                        <option value="Apr">Apr</option>
-                        <option value="May">May</option>
-                        <option value="Jun">Jun</option>
-                        <option value="Jul">Jul</option>
-                        <option value="Aug">Aug</option>
-                        <option value="Sep">Sep</option>
-                        <option value="Oct">Oct</option>
-                        <option value="Nov">Nov</option>
-                        <option value="Dec">Dec</option>
+                        <option value="365">Last 1 year</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="chartStatistic">Chart Statistic:</label>
+                    <select id="chartStatistic" onchange="updateChart()">
+                        <option value="median" selected>Median</option>
+                        <option value="average">Average</option>
+                        <option value="p50">p50 (50th percentile)</option>
+                        <option value="p95">p95 (95th percentile)</option>
                     </select>
                 </div>
             </div>

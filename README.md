@@ -65,10 +65,10 @@ npm start
 - `POST /api/auth/rotate` - Manually rotate token
 
 ### Port Data
-- `GET /api/port/entities?blueprint=githubPullRequest` - Fetch entities
+- `GET /api/port/entities?blueprint=github_pull_request` - Fetch entities
 - `GET /api/port/blueprints` - List blueprints
-- `GET /api/port/properties?blueprint=githubPullRequest` - Extract properties
-- `GET /api/port/values/:property?blueprint=githubPullRequest` - Get property values
+- `GET /api/port/properties?blueprint=github_pull_request` - Extract properties
+- `GET /api/port/values/:property?blueprint=github_pull_request` - Get property values
 
 ### Health
 - `GET /health` - Health check endpoint
@@ -135,11 +135,11 @@ const apiClient = new ApiClient();
 await apiClient.validateToken();
 
 // Load entities
-const response = await apiClient.getEntities('githubPullRequest');
+const response = await apiClient.getEntities('github_pull_request');
 const entities = response.data;
 
 // Get properties
-const properties = await apiClient.getProperties('githubPullRequest');
+const properties = await apiClient.getProperties('github_pull_request');
 ```
 
 ### Error Handling

@@ -6,21 +6,27 @@ class ChartManager {
         this.ctx = this.canvas.getContext('2d');
     }
 
-    createChart(data, chartType = 'bar', metric = 'hours') {
+    createChart(data, chartType = 'bar', metric = 'hours', statistic = 'median') {
         // Destroy existing chart
         if (this.chart) {
             this.chart.destroy();
         }
 
         const labels = data.map(item => item.date);
-        const values = data.map(item => item[metric]);
+        // Use statistic value for hours metric, otherwise use metric directly
+        const values = data.map(item => {
+            if (metric === 'hours' || metric === 'avgHours') {
+                return item.value || item[statistic] || item.median;
+            }
+            return item[metric];
+        });
 
         const config = {
             type: chartType,
             data: {
                 labels: labels,
                 datasets: [{
-                    label: this.getMetricLabel(metric),
+                    label: this.getMetricLabel(metric, statistic),
                     data: values,
                     backgroundColor: chartType === 'bar' ? 
                         'rgba(52, 152, 219, 0.8)' : 
@@ -36,7 +42,7 @@ class ChartManager {
                 plugins: {
                     title: {
                         display: true,
-                        text: `Port PR Analytics - ${this.getMetricLabel(metric)}`,
+                        text: `Port PR Analytics - ${this.getMetricLabel(metric, statistic)}`,
                         font: {
                             size: 16,
                             weight: 'bold'
@@ -57,7 +63,7 @@ class ChartManager {
                     y: {
                         title: {
                             display: true,
-                            text: this.getMetricLabel(metric)
+                            text: this.getMetricLabel(metric, statistic)
                         },
                         beginAtZero: true
                     }
@@ -72,38 +78,60 @@ class ChartManager {
         this.chart = new Chart(this.ctx, config);
     }
 
-    updateChart(data, chartType, metric) {
+    updateChart(data, chartType, metric, statistic = 'median') {
         if (!this.chart) {
-            this.createChart(data, chartType, metric);
+            this.createChart(data, chartType, metric, statistic);
             return;
         }
 
         // Check if chart type has changed
         if (this.chart.config.type !== chartType) {
             console.log(`Chart type changed from ${this.chart.config.type} to ${chartType}`);
-            this.createChart(data, chartType, metric);
+            this.createChart(data, chartType, metric, statistic);
             return;
         }
 
         const labels = data.map(item => item.date);
-        const values = data.map(item => item[metric]);
+        // Use statistic value for hours metric, otherwise use metric directly
+        const values = data.map(item => {
+            if (metric === 'hours' || metric === 'avgHours') {
+                return item.value || item[statistic] || item.median;
+            }
+            return item[metric];
+        });
 
         this.chart.data.labels = labels;
         this.chart.data.datasets[0].data = values;
-        this.chart.data.datasets[0].label = this.getMetricLabel(metric);
-        this.chart.options.plugins.title.text = `Port PR Analytics - ${this.getMetricLabel(metric)}`;
-        this.chart.options.scales.y.title.text = this.getMetricLabel(metric);
+        this.chart.data.datasets[0].label = this.getMetricLabel(metric, statistic);
+        this.chart.options.plugins.title.text = `Port PR Analytics - ${this.getMetricLabel(metric, statistic)}`;
+        this.chart.options.scales.y.title.text = this.getMetricLabel(metric, statistic);
 
         this.chart.update('active');
     }
 
-    getMetricLabel(metric) {
-        const labels = {
-            'hours': 'Total Hours',
+    getMetricLabel(metric, statistic = 'median') {
+        const metricLabels = {
+            'hours': 'Hours',
             'count': 'Count',
-            'avgHours': 'Average Hours'
+            'avgHours': 'Hours'
         };
-        return labels[metric] || metric;
+        
+        const statisticLabels = {
+            'median': 'Median',
+            'average': 'Average',
+            'p50': 'p50 (50th percentile)',
+            'p95': 'p95 (95th percentile)'
+        };
+        
+        const metricName = metricLabels[metric] || metric;
+        const statisticName = statisticLabels[statistic] || statistic;
+        
+        // For hours-based metrics, include the statistic
+        if (metric === 'hours' || metric === 'avgHours') {
+            return `${statisticName} ${metricName}`;
+        }
+        
+        return metricName;
     }
 
     showEmptyChart() {
